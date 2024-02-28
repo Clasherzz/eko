@@ -413,7 +413,40 @@ app.put('/component-add',async (req,res)=>{
     }
 
 })
+app.post('/gfc1', async (req, res) => {
+    console.log("gfc1");
+    const { collection, userid} = req.body;
 
+    try {
+        const collectionRef = admin.firestore().collection(collection);
+
+        // Get all documents from the collection
+        const snapshot = await collectionRef.get();
+        console.log(snapshot);
+        // Prepare the result array
+        const results = [];
+
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            if (userid==data["userid"]) {
+                // Check if specName is a substring of the fieldName value
+                
+                    // If the condition is met, push data to results
+                    results.push(data);
+                
+            }
+        });
+        console.log(results);
+        // Send the results as a response to the front end
+        res.json({ results });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+    finally {
+        console.log("end");
+    }
+});
 app.listen(port, () => {
     console.log("Server is running on http://localhost:3000:");
 });
