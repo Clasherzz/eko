@@ -59,6 +59,7 @@ app.post('/database-text', async (req, res) => {
             speaker: speaker.response.text(),
             userid:userid,
             phone:phone,
+            bidding:null,
         });
         console.log("stopped");
 
@@ -257,6 +258,161 @@ app.put('/updateDocument', async (req, res) => {
         res.status(500).json({ message: 'Internal server error' });
     }
 });
+
+app.get('/highest', async (req, res) => {
+    console.log("getting highest value");
+
+    try {
+        const { collectionName,userid } = req.body;
+        
+        const collectionRef = admin.firestore().collection(collectionName);
+
+        // Get all documents from the collection
+        //const snapshot = await collectionRef.get();
+        const snapshot = await db.collection(collection).where("userid", '==', userid).get();
+        // Initialize variable to store the highest value
+        let highestValue = null;
+
+        snapshot.forEach(doc => {
+                
+                const data = doc.data();
+            
+                const fieldValue = data[bidding];
+                console.log(fieldValue);
+                
+                // Check if fieldValue is a number and greater than the current highestValue
+                // if (typeof fieldValue === 'number' && (highestValue === null || fieldValue > highestValue)) {
+                //     highestValue = fieldValue;
+                // }
+            
+        });
+
+        // Send the highest value as a response to the front end
+        res.json({ fieldValue });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Internal Server Error' });
+    } finally {
+        console.log("end");
+    }
+});
+
+
+app.put('/bidding', async (req, res) => {
+    console.log("updating ...");
+    const {  phoneNumber, amount } = req.body;
+    //const { collection, phoneNumber, amount, searchFieldName, searchFieldValue } = req.body;
+    // const searchFieldName = 'bidding';
+    console.log(collection + phoneNumber + amount);
+
+    try {
+        console.log("trying");
+        const db = admin.firestore();
+
+        // Query to find documents where the constant search field matches the search value
+        const querySnapshot = await db.collection(collection).where(searchFieldName, '==', searchFieldValue).get();
+        console.log(querySnapshot);
+        
+        let highest = null; // Move the highest variable outside the loop
+
+        // Update each document found
+        const batch = db.batch();
+        querySnapshot.forEach(async (doc) => {
+            const data = doc.data();
+            const currentBidding = data["bidding"];
+            console.log(currentBidding);
+
+            // Check if currentBidding is greater than the current highest
+            if (highest === null || currentBidding < amount) {
+                highest = amount;
+            }
+        });
+
+        // Update all documents to the highest value
+        querySnapshot.forEach(async (doc) => {
+            await batch.update(doc.ref, { bidding: "amount:"+highest+" "+"contact"+phoneNumber });
+        });
+
+        // Commit the batch
+        await batch.commit();
+
+        res.json({ highest });
+    } catch (error) {
+        console.error('Error updating documents:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+app.put('/biddinguser', async (req, res) => {
+    console.log("updating bidding-user ...");
+   0 //const {  phoneNumber, amount } = req.body;
+    //const { collection, phoneNumber, amount, searchFieldName, searchFieldValue, userid } = req.body;
+    const { collection, phoneNumber, amount, userid } = req.body;
+    // const searchFieldName = 'bidding';
+    console.log(collection + phoneNumber + amount);
+
+    try {
+        console.log("trying");
+        const db = admin.firestore();
+
+        // Query to find documents where the constant search field matches the search value
+        const querySnapshot = await db.collection(collection).where("userid", '==', userid).get();
+        console.log(querySnapshot);
+        
+        let highest = null; // Move the highest variable outside the loop
+
+        // Update each document found
+        const batch = db.batch();
+        querySnapshot.forEach(async (doc) => {
+            const data = doc.data();
+            const currentBidding = data["bidding"];
+            console.log(currentBidding);
+
+            // Check if currentBidding is greater than the current highest
+            if (highest === null || currentBidding < amount) {
+                highest = amount;
+            }
+        });
+
+        // Update all documents to the highest value
+        querySnapshot.forEach(async (doc) => {
+            
+            await batch.update(doc.ref, { bidding:highest});
+    
+            //await batch.update(doc.ref, { bidding: "amount:"+highest+" "+"contact"+phoneNumber });
+        });
+
+        // Commit the batch
+        await batch.commit();
+
+        res.json({ highest });
+    } catch (error) {
+        console.error('Error updating documents:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+app.put('/component-add',async (req,res)=>{
+    const {componentName , size , userid,phoneNumber} = req.body;
+    try{
+         const collectionName = componentName.toLowerCase(); 
+        const collectionRef = admin.firestore().collection(collectionName);
+
+        // Add the generated text to the Firestore collection under the 'description' field
+        await collectionRef.add({
+            componentName: componentName,
+            size: size,
+            userid: userid,
+            phoneNumber:phoneNumber,
+
+        });
+        console.log("stopped");
+        res.json({message:"finished"});
+
+    }catch{
+        console.log(e);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+
+})
 
 app.listen(port, () => {
     console.log("Server is running on http://localhost:3000:");
