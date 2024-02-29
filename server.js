@@ -53,17 +53,7 @@ app.post('/database-text', async (req, res) => {
         const collectionRef = admin.firestore().collection(inputString);
 
         // Add the generated text to the Firestore collection under the 'description' field
-        // await collectionRef.add({
-        //     camera: camera.response.text(),
-        //     screen: screen.response.text(),
-        //     battery: battery.response.text(),
-        //     sensor: sensor.response.text(),
-        //     triggermotor: triggermotor.response.text(),
-        //     speaker: speaker.response.text(),
-        //     userid:userid,
-        //     phone:phone,
-        //     bidding:null,
-        // });
+      
         await collectionRef.add({
             camera: camera.response.text(),
             screen: screen.response.text(),
