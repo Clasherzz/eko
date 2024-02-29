@@ -25,11 +25,14 @@ app.post('/database-text', async (req, res) => {
     const inputString = req.body.inputString;
     const userid = req.body.userid;
     const phone = req.body.phone;
+    const amount = req.body.bid;
+    
     // const {userid} = req.body.userid;
     // console.log(userid);
 
     try {
         const genAI = new GoogleGenerativeAI("AIzaSyCweoRMLwzDJo1VlAgZOFoavZy4jIB9bb4");
+        //const genAI = new GoogleGenerativeAI("AIzaSyCFriejxxUTcjDTo9V91OUrlXXIvbhsplk");
         const model = genAI.getGenerativeModel({ model: "gemini-pro" });
         //const battery =  await model.generateContent("Provide precise details regarding the battery of"+inputString);
         const camera =  await model.generateContent("Give aperture and pixel in camera of "+inputString+"directly without any description just give the numbers");
@@ -50,6 +53,17 @@ app.post('/database-text', async (req, res) => {
         const collectionRef = admin.firestore().collection(inputString);
 
         // Add the generated text to the Firestore collection under the 'description' field
+        // await collectionRef.add({
+        //     camera: camera.response.text(),
+        //     screen: screen.response.text(),
+        //     battery: battery.response.text(),
+        //     sensor: sensor.response.text(),
+        //     triggermotor: triggermotor.response.text(),
+        //     speaker: speaker.response.text(),
+        //     userid:userid,
+        //     phone:phone,
+        //     bidding:null,
+        // });
         await collectionRef.add({
             camera: camera.response.text(),
             screen: screen.response.text(),
@@ -59,7 +73,7 @@ app.post('/database-text', async (req, res) => {
             speaker: speaker.response.text(),
             userid:userid,
             phone:phone,
-            bidding:null,
+            bidding:"amount:"+amount+"phone:0",
         });
         console.log("stopped");
 
@@ -358,28 +372,43 @@ app.put('/biddinguser', async (req, res) => {
         const querySnapshot = await db.collection(collection).where("userid", '==', userid).get();
         console.log(querySnapshot);
         
-        let highest = null; // Move the highest variable outside the loop
+        let highest = 0; // Move the highest variable outside the loop
 
         // Update each document found
         const batch = db.batch();
         querySnapshot.forEach(async (doc) => {
             const data = doc.data();
-            const currentBidding = data["bidding"];
-            console.log(currentBidding);
+            const Bidding = data["bidding"];
+            console.log("bidding"+Bidding);
+            const amountMatch = Bidding.match(/amount:(\d+)/);
+            const contactMatch = Bidding.match(/contact:(\d+)/);
+            // const amountMatch = /amount(\d+)/.exec(Bidding);
+            // const contactMatch = /contact(\d+)/.exec(Bidding);
+            console.log(amountMatch);
+            console.log(contactMatch);
+// Check if matches are found
+            const amountd = amountMatch ? parseInt(amountMatch[1], 10) : null;
+            console.log("amountd:"+amountd);
+            const contactd = contactMatch ? parseInt(contactMatch[1], 10) : null;
 
+            // const currentBidding = parseInt(Bidding,10);
+            // console.log(currentBidding);
+            const amounti = parseInt(amount,10);
             // Check if currentBidding is greater than the current highest
-            if (highest === null || currentBidding < amount) {
-                highest = amount;
+            if ( amountd < amounti) {
+                //highest = amounti;
+                await batch.update(doc.ref, { bidding:"amount:"+amounti+"phone:"+phoneNumber});
             }
         });
+        //console.log("highest is:"+highest);
 
         // Update all documents to the highest value
-        querySnapshot.forEach(async (doc) => {
+        // querySnapshot.forEach(async (doc) => {
             
-            await batch.update(doc.ref, { bidding:highest});
+        //     await batch.update(doc.ref, { bidding:highest});
     
-            //await batch.update(doc.ref, { bidding: "amount:"+highest+" "+"contact"+phoneNumber });
-        });
+        //     //await batch.update(doc.ref, { bidding: "amount:"+highest+" "+"contact"+phoneNumber });
+        // });
 
         // Commit the batch
         await batch.commit();
@@ -391,8 +420,13 @@ app.put('/biddinguser', async (req, res) => {
     }
 });
 app.put('/component-add',async (req,res)=>{
-    const {componentName , size , userid,phoneNumber} = req.body;
+    const {componentName ,description, size , userid,phoneNumber} = req.body;
     try{
+        // var serviceAccount = require("/firebase1.json");
+
+        // admin.initializeApp({
+        //     credential: admin.credential.cert(serviceAccount)
+        // });
          const collectionName = componentName.toLowerCase(); 
         const collectionRef = admin.firestore().collection(collectionName);
 
@@ -402,12 +436,14 @@ app.put('/component-add',async (req,res)=>{
             size: size,
             userid: userid,
             phoneNumber:phoneNumber,
+            description:description,
+            bidding:"amount:0phone:0",
 
         });
         console.log("stopped");
         res.json({message:"finished"});
 
-    }catch{
+    }catch(e){
         console.log(e);
         res.status(500).json({ error: 'Internal Server Error' });
     }
@@ -418,23 +454,30 @@ app.post('/gfc1', async (req, res) => {
     const { collection, userid} = req.body;
 
     try {
-        const collectionRef = admin.firestore().collection(collection);
+       // const collectionRef = admin.firestore().collection(collection);
 
         // Get all documents from the collection
-        const snapshot = await collectionRef.get();
-        console.log(snapshot);
-        // Prepare the result array
+        // const snapshot = await collectionRef.get();
+        // console.log(snapshot);
+        // // Prepare the result array
         const results = [];
 
-        snapshot.forEach(doc => {
-            const data = doc.data();
-            if (userid==data["userid"]) {
-                // Check if specName is a substring of the fieldName value
+        // snapshot.forEach(doc => {
+        //     const data = doc.data();
+        //     if (userid==data["userid"]) {
+        //         // Check if specName is a substring of the fieldName value
                 
-                    // If the condition is met, push data to results
-                    results.push(data);
+        //             // If the condition is met, push data to results
+        //             results.push(data);
                 
-            }
+        //     }
+        // });
+        const querySnapshot = await admin.firestore().collection(collection).where('userid', '==', userid).get();
+        console.log(querySnapshot);
+        // Delete each document found
+        querySnapshot.forEach(async (doc) => {
+
+          results.push(doc.data());
         });
         console.log(results);
         // Send the results as a response to the front end
@@ -447,6 +490,41 @@ app.post('/gfc1', async (req, res) => {
         console.log("end");
     }
 });
+app.put('/component-update',async(req,res)=>{
+    console.log("component updating");
+    const {component,description,userid}=req.body;
+    console.log(component+description+userid);
+    try{
+        let db= admin.firestore();
+        // Query to find documents where the constant search field matches the search value
+        const querySnapshot = await db.collection(component).where("userid", '==', userid).get();
+        console.log(querySnapshot);
+        // Update each document found
+        const batch = db.batch();
+        querySnapshot.forEach(async (doc) => {
+            const docId = doc.id;
+            console.log(docId);
+
+            
+            await batch.update(doc.ref, { ["description"]:description });//await ittu
+        });
+
+        // Commit the batch
+        await batch.commit();
+
+        res.json({ message: 'Documents updated successfully' });
+
+
+
+
+
+    }catch(e){
+        console.error(e);
+        res.status(500).json({ error: 'Internal Server Error' });
+        
+
+    }
+})
 app.listen(port, () => {
     console.log("Server is running on http://localhost:3000:");
 });
